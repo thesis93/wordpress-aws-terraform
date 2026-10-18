@@ -1,0 +1,23 @@
+# Copy to terraform.tfvars and adjust as needed. All values have defaults,
+# so you can also just run `terraform apply` with none of these set.
+
+project_name = "ha-wordpress"
+region       = "us-east-1"
+
+availability_zones   = ["us-east-1a", "us-east-1b"]
+vpc_cidr             = "10.0.0.0/16"
+public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24"]
+private_subnet_cidrs = ["10.0.3.0/24", "10.0.4.0/24"]
+
+instance_type        = "t3.micro"
+asg_min_size         = 2
+asg_max_size         = 4
+asg_desired_capacity = 2
+
+# key_name = "my-keypair"   # optional; omit to use SSM Session Manager only
+
+db_name              = "wordpress"
+db_username          = "wpadmin"
+db_instance_class    = "db.t3.micro"
+db_allocated_storage = 20
+db_engine_version    = "8.0"

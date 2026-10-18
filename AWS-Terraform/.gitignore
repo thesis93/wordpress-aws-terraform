@@ -1,0 +1,26 @@
+# ---- Terraform ----
+# Local state (may contain secrets like the DB password) — never commit
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+
+# Crash logs
+crash.log
+crash.*.log
+
+# Provider plugins & local Terraform working dir
+.terraform/
+.terraform.lock.hcl
+
+# Variable files that may hold secrets or environment specifics
+terraform.tfvars
+*.auto.tfvars
+
+# Plan output files
+*.tfplan
+
+# ---- Editor / OS ----
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

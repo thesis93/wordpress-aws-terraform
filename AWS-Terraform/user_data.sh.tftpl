@@ -1,0 +1,58 @@
+#!/bin/bash
+set -euxo pipefail
+
+# ---------------------------------------------------------------------------
+# WordPress bootstrap for Amazon Linux 2023.
+# Values in ${...} are injected by Terraform's templatefile().
+# ---------------------------------------------------------------------------
+
+DB_ENDPOINT="${db_endpoint}"
+DB_NAME="${db_name}"
+DB_USER="${db_user}"
+DB_PASSWORD="${db_password}"
+
+# --- Packages ---------------------------------------------------------------
+dnf update -y
+dnf install -y httpd php php-mysqlnd php-fpm php-json php-gd php-mbstring php-xml wget tar
+
+systemctl enable --now httpd
+
+# --- Install WordPress ------------------------------------------------------
+cd /tmp
+wget -q https://wordpress.org/latest.tar.gz
+tar -xzf latest.tar.gz
+cp -r wordpress/* /var/www/html/
+
+cd /var/www/html
+cp wp-config-sample.php wp-config.php
+
+# Database settings. Using '|' as the sed delimiter avoids clashes with '/'
+# that can appear in passwords.
+sed -i "s|database_name_here|$DB_NAME|"     wp-config.php
+sed -i "s|username_here|$DB_USER|"          wp-config.php
+sed -i "s|password_here|$DB_PASSWORD|"      wp-config.php
+sed -i "s|localhost|$DB_ENDPOINT|"          wp-config.php
+
+# --- Replace the placeholder auth salts with fresh ones ---------------------
+SALTS="$(wget -q -O - https://api.wordpress.org/secret-key/1.1/salt/)"
+# Remove the default salt defines, then insert the fetched block.
+sed -i "/define( *'\(AUTH\|SECURE_AUTH\|LOGGED_IN\|NONCE\)_\(KEY\|SALT\)'/d" wp-config.php
+printf '%s\n' "$SALTS" > /tmp/wp-salts.txt
+sed -i "/^\$table_prefix/r /tmp/wp-salts.txt" wp-config.php
+rm -f /tmp/wp-salts.txt
+
+# --- Trust the ALB's X-Forwarded-* headers (correct scheme behind the LB) ---
+cat >> /var/www/html/wp-config.php <<'PHP'
+
+/* Respect the load balancer's forwarded protocol. */
+if ( isset( $_SERVER['HTTP_X_FORWARDED_PROTO'] ) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https' ) {
+    $_SERVER['HTTPS'] = 'on';
+}
+PHP
+
+# --- Permissions ------------------------------------------------------------
+chown -R apache:apache /var/www/html
+find /var/www/html -type d -exec chmod 755 {} \;
+find /var/www/html -type f -exec chmod 644 {} \;
+
+systemctl restart httpd
