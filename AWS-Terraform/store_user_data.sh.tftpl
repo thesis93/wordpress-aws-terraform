@@ -1,0 +1,211 @@
+#!/bin/bash
+set -euxo pipefail
+
+# Serve the Spin & Groove storefront (with live audio previews) on every instance.
+dnf install -y httpd
+systemctl enable --now httpd
+rm -f /etc/httpd/conf.d/welcome.conf || true
+
+cat > /var/www/html/index.html <<'STOREEOF'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spin &amp; Groove — Online Vinyl Store</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{ --navy:#0B1F3A; --deep:#0A4D68; --teal:#1C7293; --orange:#FF9900;
+    --ink:#16222E; --muted:#6A7B8A; --bg:#F7FAFC; --line:#E6EDF3; }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  body{ font-family:'Poppins',Arial,sans-serif; color:var(--ink); background:#fff; padding-bottom:70px; }
+  .container{ max-width:1180px; margin:0 auto; padding:0 24px; }
+  a{ text-decoration:none; }
+
+  header{ border-bottom:1px solid var(--line); }
+  .hinner{ height:84px; overflow:hidden; }
+  .brand{ float:left; padding-top:22px; }
+  .brand .disc{ display:inline-block; width:38px; height:38px; border-radius:50%; vertical-align:middle; margin-right:12px;
+    background:radial-gradient(circle at center,#FF9900 0,#FF9900 8px,#111 8px,#111 100%);
+    box-shadow:inset 0 0 0 3px #000, inset 0 0 0 15px #1d1d1d, inset 0 0 0 16px #333; }
+  .brand .name{ font-weight:700; font-size:24px; letter-spacing:1px; color:var(--navy); vertical-align:middle; }
+  .nav{ float:right; padding-top:30px; }
+  .nav a{ color:var(--ink); font-size:15px; font-weight:500; margin-left:28px; }
+  .nav .cart{ background:var(--navy); color:#fff; padding:9px 18px; border-radius:30px; margin-left:30px; font-weight:600; }
+
+  .hero{ background:linear-gradient(120deg,#0B1F3A 0%,#0A4D68 60%,#1C7293 120%); color:#fff; position:relative; overflow:hidden; }
+  .hero .container{ position:relative; z-index:2; padding-top:70px; padding-bottom:70px; }
+  .eyebrow{ color:var(--orange); font-weight:700; letter-spacing:4px; font-size:14px; margin-bottom:16px; }
+  .hero h1{ font-weight:700; font-size:52px; line-height:1.05; max-width:640px; margin-bottom:18px; }
+  .hero p{ font-size:19px; color:#CADCFC; max-width:540px; margin-bottom:30px; }
+  .btn{ display:inline-block; background:var(--orange); color:#16222E; font-weight:700; font-size:17px; padding:15px 30px; border-radius:10px; cursor:pointer; }
+  .btn.ghost{ background:transparent; color:#fff; border:2px solid rgba(255,255,255,.5); margin-left:14px; padding:13px 26px; }
+  .record{ position:absolute; right:-80px; top:-30px; width:460px; height:460px; border-radius:50%; z-index:1;
+    background:radial-gradient(circle at center,#FF9900 0,#FF9900 42px,#0B1F3A 42px,#0B1F3A 52px,#1b1b1b 52px,#1b1b1b 108px,#0a0a0a 108px,#0a0a0a 115px,#1b1b1b 115px,#1b1b1b 170px,#0a0a0a 170px,#0a0a0a 177px,#1b1b1b 177px,#1b1b1b 228px,#0a0a0a 228px,#0a0a0a 230px);
+    box-shadow:0 30px 70px rgba(0,0,0,.45); }
+
+  .feat{ padding:52px 0 20px; }
+  .feat .head{ overflow:hidden; margin-bottom:28px; }
+  .feat .head h2{ font-weight:700; font-size:32px; color:var(--navy); float:left; }
+  .feat .head .all{ float:right; color:var(--teal); font-weight:600; font-size:15px; padding-top:12px; }
+  .grid{ font-size:0; text-align:center; }
+  .card{ display:inline-block; vertical-align:top; width:256px; margin:0 12px 36px; text-align:left; }
+  .cover{ width:256px; height:234px; border-radius:14px; position:relative; overflow:hidden; }
+  .cover .label{ position:absolute; left:18px; bottom:16px; z-index:3; }
+  .cover .label .t{ color:#fff; font-weight:700; font-size:19px; line-height:1.05; }
+  .cover .label .g{ color:rgba(255,255,255,.8); font-weight:500; font-size:11px; letter-spacing:2px; }
+  .cover .vinyl{ position:absolute; right:-46px; top:24px; width:160px; height:160px; border-radius:50%; z-index:1; opacity:.95;
+    background:radial-gradient(circle at center,#FF9900 0,#FF9900 14px,#141414 14px,#141414 18px,#222 18px,#222 30px,#141414 30px,#141414 33px,#222 33px,#222 55px,#141414 55px,#141414 58px,#222 58px,#222 80px); }
+  .cover .vinyl .dot{ position:absolute; top:12px; left:50%; margin-left:-3px; width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,.75); }
+  .card.playing .vinyl{ animation:spin 1.8s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .play{ position:absolute; left:50%; top:50%; margin:-29px 0 0 -29px; width:58px; height:58px; border-radius:50%; z-index:5;
+    background:rgba(11,31,58,.80); color:#fff; border:2px solid rgba(255,255,255,.9); cursor:pointer;
+    font-size:20px; line-height:54px; text-align:center; padding-left:3px; transition:transform .12s, background .12s; }
+  .play:hover{ transform:scale(1.08); background:var(--orange); color:#16222E; }
+  .card.playing .play{ padding-left:0; background:var(--orange); color:#16222E; }
+  .c1{ background:linear-gradient(135deg,#6D28D9,#C026D3); }
+  .c2{ background:linear-gradient(135deg,#0EA5A4,#134E4A); }
+  .c3{ background:linear-gradient(135deg,#F59E0B,#B45309); }
+  .c4{ background:linear-gradient(135deg,#0A4D68,#1C7293); }
+  .meta{ padding:14px 2px 0; }
+  .meta .t{ font-weight:700; font-size:17px; color:var(--ink); }
+  .meta .a{ font-weight:500; font-size:13px; color:var(--muted); margin-top:2px; }
+  .meta .row{ margin-top:12px; overflow:hidden; }
+  .meta .price{ font-weight:700; font-size:19px; color:var(--navy); float:left; padding-top:7px; }
+  .meta .add{ float:right; background:var(--orange); color:#16222E; font-weight:700; font-size:13px; padding:10px 18px; border-radius:9px; cursor:pointer; }
+
+  .strip{ background:var(--bg); border:1px solid var(--line); border-radius:14px; padding:22px 0; font-size:0; text-align:center; margin-top:20px; }
+  .strip .i{ display:inline-block; width:32%; font-size:14px; color:var(--ink); font-weight:500; vertical-align:middle; }
+  .strip .i b{ color:var(--navy); }
+
+  footer{ background:var(--navy); color:#AEC2D6; margin-top:44px; }
+  footer .container{ padding-top:38px; padding-bottom:30px; font-size:0; }
+  .fcol{ display:inline-block; vertical-align:top; width:24%; font-size:14px; }
+  .fcol h4{ color:#fff; font-weight:700; font-size:14px; margin-bottom:12px; letter-spacing:1px; }
+  .fcol a{ display:block; color:#AEC2D6; margin-bottom:8px; font-weight:400; }
+  .fbar{ color:#6a86a3; font-size:13px; padding:16px 0 30px; }
+
+  .np{ position:fixed; left:0; right:0; bottom:0; background:#07162b; color:#fff; z-index:60;
+    transform:translateY(110%); transition:transform .3s ease; box-shadow:0 -8px 24px rgba(0,0,0,.3); }
+  .np.show{ transform:translateY(0); }
+  .np .in{ max-width:1180px; margin:0 auto; padding:12px 24px; overflow:hidden; }
+  .np .eq{ float:left; width:34px; height:30px; margin:4px 14px 0 0; }
+  .np .eq span{ display:inline-block; width:5px; margin-right:3px; background:var(--orange); vertical-align:bottom; height:8px; animation:eq .9s ease-in-out infinite; }
+  .np .eq span:nth-child(2){ animation-delay:.2s; } .np .eq span:nth-child(3){ animation-delay:.4s; } .np .eq span:nth-child(4){ animation-delay:.1s; }
+  @keyframes eq{ 0%, 100% { height:7px; } 50% { height:28px; } }
+  .np .txt{ float:left; }
+  .np .txt .n{ font-weight:700; font-size:15px; } .np .txt .a{ font-size:12px; color:#AEC2D6; }
+  .np .stop{ float:right; margin-top:4px; background:var(--orange); color:#16222E; font-weight:700; font-size:13px; padding:9px 18px; border-radius:8px; cursor:pointer; }
+  .np .note{ float:right; margin:9px 18px 0 0; font-size:12px; color:#8aa2bd; }
+
+  @media (max-width:900px){
+    .record{ display:none; } .hero h1{ font-size:40px; }
+    .strip .i{ width:100%; display:block; margin:6px 0; }
+    .fcol{ width:48%; margin-bottom:18px; } .nav{ display:none; } .np .note{ display:none; }
+  }
+</style>
+</head>
+<body>
+
+  <header><div class="container hinner">
+    <div class="brand"><span class="disc"></span><span class="name">SPIN &amp; GROOVE</span></div>
+    <div class="nav"><a href="#">Shop</a><a href="#">New Arrivals</a><a href="#">Genres</a><a href="#">About</a><a href="#" class="cart">Cart &middot; 2</a></div>
+  </div></header>
+
+  <section class="hero">
+    <div class="record"></div>
+    <div class="container">
+      <div class="eyebrow">NEW THIS WEEK</div>
+      <h1>Fresh cuts on heavyweight vinyl.</h1>
+      <p>Hand-picked records from independent artists, pressed to 180-gram wax and shipped worldwide.</p>
+      <a class="btn" onclick="play(0)">&#9654; &nbsp;Listen now</a><a href="#" class="btn ghost">Browse genres</a>
+    </div>
+  </section>
+
+  <section class="feat"><div class="container">
+    <div class="head"><h2>Featured Records</h2><a href="#" class="all">See all &rarr;</a></div>
+    <div class="grid">
+      <div class="card"><div class="cover c1"><div class="vinyl"><span class="dot"></span></div><div class="play" onclick="play(0)">&#9654;</div><div class="label"><div class="t">Midnight<br>Analog</div><div class="g">THE VELOURS</div></div></div>
+        <div class="meta"><div class="t">Midnight Analog</div><div class="a">The Velours</div><div class="row"><span class="price">&euro;26.00</span><a class="add">Add to cart</a></div></div></div>
+      <div class="card"><div class="cover c2"><div class="vinyl"><span class="dot"></span></div><div class="play" onclick="play(1)">&#9654;</div><div class="label"><div class="t">Neon<br>Harbor</div><div class="g">CASSETTE KIDS</div></div></div>
+        <div class="meta"><div class="t">Neon Harbor</div><div class="a">Cassette Kids</div><div class="row"><span class="price">&euro;24.00</span><a class="add">Add to cart</a></div></div></div>
+      <div class="card"><div class="cover c3"><div class="vinyl"><span class="dot"></span></div><div class="play" onclick="play(2)">&#9654;</div><div class="label"><div class="t">Golden<br>Hour</div><div class="g">ILA MOON</div></div></div>
+        <div class="meta"><div class="t">Golden Hour</div><div class="a">Ila Moon</div><div class="row"><span class="price">&euro;28.00</span><a class="add">Add to cart</a></div></div></div>
+      <div class="card"><div class="cover c4"><div class="vinyl"><span class="dot"></span></div><div class="play" onclick="play(3)">&#9654;</div><div class="label"><div class="t">Static<br>Bloom</div><div class="g">PARALLEL NORTH</div></div></div>
+        <div class="meta"><div class="t">Static Bloom</div><div class="a">Parallel North</div><div class="row"><span class="price">&euro;25.00</span><a class="add">Add to cart</a></div></div></div>
+    </div>
+    <div class="strip">
+      <span class="i">&#9654; &nbsp;<b>Live audio previews</b> &nbsp;listen before you buy</span>
+      <span class="i">&#128666; &nbsp;<b>Free shipping</b> &nbsp;on orders over &euro;60</span>
+      <span class="i">&#8635; &nbsp;<b>30-day returns</b> &nbsp;no questions asked</span>
+    </div>
+  </div></section>
+
+  <footer><div class="container">
+    <div class="fcol"><h4>SPIN &amp; GROOVE</h4>Independent records,<br>shipped worldwide.</div>
+    <div class="fcol"><h4>SHOP</h4><a href="#">New Arrivals</a><a href="#">Best Sellers</a><a href="#">Pre-orders</a><a href="#">Gift cards</a></div>
+    <div class="fcol"><h4>GENRES</h4><a href="#">Jazz &amp; Soul</a><a href="#">Electronic</a><a href="#">Indie &amp; Rock</a><a href="#">Hip-Hop</a></div>
+    <div class="fcol"><h4>HELP</h4><a href="#">Shipping</a><a href="#">Returns</a><a href="#">Track order</a><a href="#">Contact</a></div>
+    <div class="fbar">&copy; 2026 Spin &amp; Groove &middot; Houssem was here &middot; Running on AWS &middot; WordPress + WooCommerce</div>
+  </div></footer>
+
+  <div class="np" id="np"><div class="in">
+    <div class="eq"><span></span><span></span><span></span><span></span></div>
+    <div class="txt"><div class="n" id="npName">&mdash;</div><div class="a" id="npArtist"></div></div>
+    <div class="stop" onclick="stopPlay()">&#9632; Stop</div>
+    <div class="note">Live preview &middot; generated in your browser</div>
+  </div></div>
+
+<script>
+  var tracks=[
+    {n:"Midnight Analog",a:"The Velours",notes:[220,261.6,329.6,392],wave:"sine"},
+    {n:"Neon Harbor",a:"Cassette Kids",notes:[261.6,329.6,392,523.2],wave:"triangle"},
+    {n:"Golden Hour",a:"Ila Moon",notes:[293.7,370,440,587.3],wave:"sine"},
+    {n:"Static Bloom",a:"Parallel North",notes:[246.9,311.1,370,493.9],wave:"sawtooth"}
+  ];
+  var actx=null, cur=-1, timer=null, step=0, master=null;
+  function cards(){ return document.querySelectorAll('.card'); }
+  function plays(){ return document.querySelectorAll('.play'); }
+  function stopPlay(){
+    if(timer){ clearInterval(timer); timer=null; }
+    if(master){ try{ master.gain.setTargetAtTime(0.0001, actx.currentTime, 0.05); }catch(e){} }
+    if(cur>-1){ cards()[cur].classList.remove('playing'); plays()[cur].innerHTML='&#9654;'; }
+    cur=-1; document.getElementById('np').classList.remove('show');
+  }
+  function play(i){
+    if(cur===i){ stopPlay(); return; }
+    stopPlay();
+    try{
+      if(!actx){ actx=new (window.AudioContext||window.webkitAudioContext)(); }
+      if(actx.state==='suspended'){ actx.resume(); }
+    }catch(e){ return; }
+    cur=i; step=0;
+    master=actx.createGain(); master.gain.value=0.9; master.connect(actx.destination);
+    var t=tracks[i];
+    function tick(){
+      var o=actx.createOscillator(), g=actx.createGain();
+      o.type=t.wave;
+      var f=t.notes[step%t.notes.length]*((step%8)<4?1:2);
+      o.frequency.value=f; o.connect(g); g.connect(master);
+      var now=actx.currentTime;
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.exponentialRampToValueAtTime(0.22, now+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, now+0.34);
+      o.start(now); o.stop(now+0.37);
+      step++;
+    }
+    tick(); timer=setInterval(tick,250);
+    cards()[i].classList.add('playing'); plays()[i].innerHTML='&#10073;&#10073;';
+    document.getElementById('npName').textContent=t.n;
+    document.getElementById('npArtist').textContent=t.a;
+    document.getElementById('np').classList.add('show');
+  }
+</script>
+</body>
+</html>
+STOREEOF
+
+systemctl restart httpd

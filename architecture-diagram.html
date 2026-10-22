@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face{ font-family:'Poppins'; font-weight:400; src:url('file:///usr/share/fonts/truetype/google-fonts/Poppins-Regular.ttf'); }
+  @font-face{ font-family:'Poppins'; font-weight:500; src:url('file:///usr/share/fonts/truetype/google-fonts/Poppins-Medium.ttf'); }
+  @font-face{ font-family:'Poppins'; font-weight:700; src:url('file:///usr/share/fonts/truetype/google-fonts/Poppins-Bold.ttf'); }
+  :root{ --navy:#0B1F3A; --deep:#0A4D68; --teal:#1C7293; --orange:#FF9900; --ink:#16222E; --muted:#6A7B8A; --line:#C9D6E2; }
+  *{ box-sizing:border-box; margin:0; padding:0; font-family:'Poppins',Arial,sans-serif; }
+  body{ background:#fff; }
+  .canvas{ position:relative; width:1500px; height:1040px; background:#fff; }
+  .t{ position:absolute; }
+  .box{ position:absolute; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-direction:column; text-align:center;
+        font-weight:700; color:#fff; box-shadow:0 6px 16px rgba(20,40,60,.14); line-height:1.15; padding:6px 10px; }
+  .sub{ font-weight:500; font-size:12px; opacity:.85; }
+  .band{ position:absolute; border-radius:10px; }
+  .az{ position:absolute; border:1px dashed #Aebecd; border-radius:10px; }
+  .arrow{ position:absolute; width:3px; background:var(--deep); }
+  .arrow:after{ content:''; position:absolute; bottom:-1px; left:-5px; border-left:6px solid transparent; border-right:6px solid transparent; border-top:9px solid var(--deep); }
+  .lab{ position:absolute; font-weight:700; font-size:13px; color:var(--teal); letter-spacing:1px; }
+</style>
+</head>
+<body>
+<div class="canvas">
+
+  <!-- title -->
+  <div class="t" style="left:60px; top:28px; font-weight:700; font-size:30px; color:var(--navy);">Highly Available Vinyl Store on AWS</div>
+  <div class="t" style="left:62px; top:70px; font-size:15px; color:var(--muted);">Region: us-west-2 &middot; WordPress fleet + MySQL &middot; deployed with Terraform</div>
+
+  <!-- users + IGW -->
+  <div class="box" style="left:600px; top:120px; width:300px; height:54px; background:#fff; color:var(--ink); border:1.5px solid var(--line); box-shadow:none;">Users / Internet</div>
+  <div class="arrow" style="left:748px; top:174px; height:44px;"></div>
+  <div class="box" style="left:600px; top:218px; width:300px; height:54px; background:var(--teal);">Internet Gateway</div>
+
+  <!-- AWS cloud / region boundary -->
+  <div class="band" style="left:60px; top:300px; width:1380px; height:700px; background:#F7FAFC; border:2px dashed var(--deep);"></div>
+  <div class="t" style="left:84px; top:312px; font-weight:700; font-size:14px; color:var(--deep);">AWS Cloud &middot; VPC 10.0.0.0/16</div>
+
+  <!-- public subnet band -->
+  <div class="band" style="left:95px; top:352px; width:1310px; height:150px; background:#EAF1F7;"></div>
+  <div class="lab" style="left:112px; top:360px;">PUBLIC SUBNETS &middot; us-west-2a / us-west-2b</div>
+  <div class="box" style="left:520px; top:398px; width:460px; height:86px; background:var(--deep); font-size:16px;">Application Load Balancer<div class="sub">HTTP :80 &middot; health checks</div></div>
+  <div class="box" style="left:1120px; top:398px; width:250px; height:86px; background:var(--teal); font-size:15px;">NAT Gateway<div class="sub">outbound updates</div></div>
+
+  <!-- arrow IGW -> ALB -->
+  <div class="arrow" style="left:748px; top:272px; height:117px;"></div>
+
+  <!-- private subnet band -->
+  <div class="band" style="left:95px; top:532px; width:1310px; height:440px; background:#EAF1F7;"></div>
+  <div class="lab" style="left:112px; top:540px;">PRIVATE SUBNETS &middot; us-west-2a / us-west-2b</div>
+
+  <!-- AZ columns -->
+  <div class="az" style="left:120px; top:572px; width:625px; height:378px;"></div>
+  <div class="t" style="left:140px; top:580px; font-size:12px; font-weight:700; color:var(--muted);">AZ us-west-2a</div>
+  <div class="az" style="left:755px; top:572px; width:625px; height:378px;"></div>
+  <div class="t" style="left:775px; top:580px; font-size:12px; font-weight:700; color:var(--muted);">AZ us-west-2b</div>
+
+  <!-- ASG box -->
+  <div class="band" style="left:300px; top:612px; width:900px; height:170px; background:#fff; border:1.5px solid var(--teal);"></div>
+  <div class="t" style="left:300px; top:622px; width:900px; text-align:center; font-weight:700; font-size:13px; color:var(--ink);">Auto Scaling Group (Store Fleet &middot; 2&ndash;4)</div>
+  <div class="box" style="left:360px; top:660px; width:270px; height:90px; background:var(--navy); font-size:15px;">EC2 &middot; Store #1<div class="sub">WordPress / Apache</div></div>
+  <div class="box" style="left:870px; top:660px; width:270px; height:90px; background:var(--navy); font-size:15px;">EC2 &middot; Store #2<div class="sub">WordPress / Apache</div></div>
+
+  <!-- arrow ALB -> ASG -->
+  <div class="arrow" style="left:748px; top:484px; height:124px;"></div>
+
+  <!-- MySQL -->
+  <div class="box" style="left:560px; top:838px; width:380px; height:84px; background:var(--orange); color:var(--ink); font-size:16px;">EC2 &middot; MySQL (MariaDB)<div class="sub" style="opacity:.75;">port 3306 &middot; private subnet (us-west-2a)</div></div>
+  <!-- arrow ASG -> MySQL -->
+  <div class="arrow" style="left:748px; top:782px; height:52px;"></div>
+
+  <!-- footer -->
+  <div class="t" style="left:60px; top:1008px; font-size:12px; color:var(--muted);">Spin &amp; Groove &middot; Capstone by Houssem &middot; Internet &#8594; IGW &#8594; ALB &#8594; EC2 fleet &#8594; MySQL</div>
+
+</div>
+</body>
+</html>
