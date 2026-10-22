@@ -40,7 +40,7 @@ resource "aws_launch_template" "wordpress" {
   }
 
   user_data = base64encode(templatefile("${path.module}/user_data.sh.tftpl", {
-    db_endpoint = aws_db_instance.wordpress.address
+    db_endpoint = aws_instance.db.private_ip
     db_name     = var.db_name
     db_user     = var.db_username
     db_password = random_password.db.result

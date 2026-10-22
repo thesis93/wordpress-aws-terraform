@@ -1,0 +1,26 @@
+#!/bin/bash
+set -euxo pipefail
+
+# ---------------------------------------------------------------------------
+# MySQL (MariaDB) server for WordPress, on Amazon Linux 2023.
+# The placeholder values below are injected by Terraform's templatefile().
+# ---------------------------------------------------------------------------
+
+dnf update -y
+dnf install -y mariadb105-server
+
+# Listen on all interfaces so the WordPress fleet can connect over the VPC.
+cat > /etc/my.cnf.d/wordpress.cnf <<'CFG'
+[mysqld]
+bind-address=0.0.0.0
+CFG
+
+systemctl enable --now mariadb
+
+# Create the database and a user the WordPress servers log in with.
+mysql -u root <<SQL
+CREATE DATABASE IF NOT EXISTS ${db_name};
+CREATE USER IF NOT EXISTS '${db_user}'@'%' IDENTIFIED BY '${db_password}';
+GRANT ALL PRIVILEGES ON ${db_name}.* TO '${db_user}'@'%';
+FLUSH PRIVILEGES;
+SQL

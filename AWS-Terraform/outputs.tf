@@ -8,9 +8,9 @@ output "alb_dns_name" {
   value       = aws_lb.wordpress.dns_name
 }
 
-output "rds_endpoint" {
-  description = "RDS MySQL endpoint (reachable only from the EC2 fleet)."
-  value       = aws_db_instance.wordpress.address
+output "db_endpoint" {
+  description = "Private IP of the MySQL (MariaDB) database instance (reachable only from the EC2 fleet)."
+  value       = aws_instance.db.private_ip
 }
 
 output "db_password" {
